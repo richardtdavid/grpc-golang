@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"f/workspace/play/grpc-go-course/greet/greetpb"
 	"fmt"
 	"io"
 	"log"
 	"time"
+
+	"play/grpc-go-course/greet/greetpb"
 
 	"google.golang.org/grpc"
 )
@@ -24,7 +25,8 @@ func main() {
 
 	// doUnary(c)
 	// doServerStreaming(c)
-	doClientStreaming(c)
+	//doClientStreaming(c)
+	doBiDirection(c)
 
 }
 
@@ -121,5 +123,20 @@ func doClientStreaming(c greetpb.GreetServiceClient) {
 		log.Fatalf("error while receiving response LongGreet: %v", err)
 	}
 	fmt.Printf("LongGreet Response: %v\n", res)
+
+}
+
+func doBiDirection(c greetpb.GreetServiceClient) {
+	fmt.Println("Starting to do a BiDirectional Streaming RPC....")
+
+	stream, err := c.GreetEveryone(context.Background())
+	if err != nil {
+		log.Fatalf("Error while creating stream: %v", err)
+		return
+	}
+
+	waitc := make(chan struct{})
+
+	<-waitc
 
 }
