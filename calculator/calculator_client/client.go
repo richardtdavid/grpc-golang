@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"play/grpc-go-course/calculator/calculatorpb"
 
@@ -21,7 +22,8 @@ func main() {
 	c := calculatorpb.NewCalculatorServiceClient(cc)
 	// doSumUnary(c)
 	// doServerStream(c)
-	doClientStreaming(c)
+	//doClientStreaming(c)
+	doBiDiStreaming(c)
 }
 
 func doSumUnary(c calculatorpb.CalculatorServiceClient) {
@@ -89,4 +91,44 @@ func doClientStreaming(c calculatorpb.CalculatorServiceClient) {
 	}
 
 	fmt.Printf("The Average is: %v", res.GetAverage())
+}
+
+func doBiDiStreaming(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a FindMaximum doBiDistreaming RPC")
+
+	stream, err := c.FindMaximum(context.Background())
+
+	if err != nil {
+		log.Fatalf("Error while opening stream and calling FindMaximum: %v", err)
+	}
+
+	waitc := make(chan struct{})
+
+	go func() {
+		numbers := []int32{4, 7, 19, 4, 6, 32}
+		for _, number := range numbers {
+			stream.Send(&calculatorpb.FindMaximumRequest{
+				Number: number,
+			})
+			time.Sleep(1000 * time.Millisecond)
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Rec()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Problem while reading server stream: %v", err)
+				break
+			}
+			maximum := res.GetMaximum()
+			fmt.Printf("Recieved a new maximum of....: %v", maximum)
+		}
+		close(waitc)
+	}()
+	<-waitc
 }
